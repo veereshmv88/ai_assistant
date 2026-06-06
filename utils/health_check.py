@@ -35,14 +35,25 @@ class CheckResult(NamedTuple):
     message: str
 
 
+def safe_print(text: str):
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        text = text.replace("✅", "[OK]").replace("❌", "[ERROR]")
+        try:
+            print(text.encode(sys.stdout.encoding or "utf-8", errors="replace").decode(sys.stdout.encoding or "utf-8"))
+        except Exception:
+            print(text.encode("ascii", errors="replace").decode("ascii"))
+
+
 async def run_health_check(cfg: Config) -> bool:
     """
     Run all health checks and print a report.
     Returns True if all critical checks pass.
     """
-    print("\n" + "=" * 60)
-    print("  AI Blind Assistant — System Health Check")
-    print("=" * 60)
+    safe_print("\n" + "=" * 60)
+    safe_print("  AI Blind Assistant — System Health Check")
+    safe_print("=" * 60)
 
     checks: list[CheckResult] = []
 
@@ -71,16 +82,16 @@ async def run_health_check(cfg: Config) -> bool:
     all_ok = True
     for check in checks:
         icon = "✅" if check.ok else "❌"
-        print(f"  {icon}  {check.name:<30}  {check.message}")
+        safe_print(f"  {icon}  {check.name:<30}  {check.message}")
         if not check.ok and _is_critical(check.name):
             all_ok = False
 
-    print("=" * 60)
+    safe_print("=" * 60)
     if all_ok:
-        print("  ✅  All critical systems OPERATIONAL")
+        safe_print("  ✅  All critical systems OPERATIONAL")
     else:
-        print("  ❌  Some critical systems have issues — see above")
-    print("=" * 60 + "\n")
+        safe_print("  ❌  Some critical systems have issues — see above")
+    safe_print("=" * 60 + "\n")
 
     return all_ok
 

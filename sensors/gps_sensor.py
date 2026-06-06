@@ -98,8 +98,41 @@ class GPSModule:
             log.info("GPS: disabled by config.")
             return
 
+        async def resolve_ip_location():
+            def fetch_ip_location_sync():
+                import urllib.request
+                import json
+                try:
+                    req = urllib.request.Request(
+                        "http://ip-api.com/json/",
+                        headers={"User-Agent": "Mozilla/5.0"}
+                    )
+                    with urllib.request.urlopen(req, timeout=5) as response:
+                        data = json.loads(response.read().decode())
+                        if data.get("status") == "success":
+                            return (
+                                float(data.get("lat")),
+                                float(data.get("lon")),
+                                data.get("city", "Unknown"),
+                                data.get("country", "Unknown")
+                            )
+                except Exception as e:
+                    log.debug(f"IP Geolocation fetch failed: {e}")
+                return None
+
+            loop = asyncio.get_event_loop()
+            res = await loop.run_in_executor(None, fetch_ip_location_sync)
+            if res:
+                lat, lon, city, country = res
+                log.info(f"GPS: Successfully determined location via IP: {city}, {country} ({lat}, {lon})")
+                self._mock_fix.latitude = lat
+                self._mock_fix.longitude = lon
+            else:
+                log.info("GPS: IP Geolocation failed, using default simulated position (Bengaluru).")
+
         if self.cfg.system.MOCK_GPS:
-            log.info("GPS: MOCK mode — simulated position (Bengaluru).")
+            log.info("GPS: MOCK mode active. Attempting to fetch real coordinates via software IP geolocation...")
+            await resolve_ip_location()
             self._latest_fix = self._mock_fix
             self._running = True
             return
@@ -121,8 +154,9 @@ class GPSModule:
                 f"GPS serial opened: {hw.GPS_SERIAL_PORT} @ {hw.GPS_BAUD_RATE} baud"
             )
         except Exception as e:
-            log.warning(f"GPS init failed ({e}) — switching to MOCK mode.")
+            log.warning(f"GPS hardware init failed ({e}) — switching to software IP geolocation mock mode.")
             self.cfg.system.MOCK_GPS = True
+            await resolve_ip_location()
             self._latest_fix = self._mock_fix
             self._running = True
 

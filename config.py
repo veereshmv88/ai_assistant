@@ -156,7 +156,7 @@ class SystemConfig:
     # ── Feature flags ─────────────────────────────────────────────────────────
     ENABLE_FACE_RECOGNITION: bool = True
     ENABLE_CURRENCY_DETECTION: bool = True
-    ENABLE_GPS: bool = True
+    ENABLE_GPS: bool = False
     ENABLE_ULTRASONIC: bool = True
     ENABLE_SCENE_MEMORY: bool = True
     ENABLE_SOS: bool = True
