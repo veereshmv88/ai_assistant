@@ -1,0 +1,42 @@
+[Unit]
+Description=AI Blind Assistant — Real-Time Navigation System for Visually Impaired
+After=network.target ollama.service sound.target
+Wants=ollama.service
+
+[Service]
+# ── Process settings ──────────────────────────────────────────────────────────
+Type=simple
+User=pi
+WorkingDirectory=/opt/blind_assistant
+ExecStart=/opt/blind_assistant/venv/bin/python main.py
+Restart=on-failure
+RestartSec=10
+RestartBurstLimit=5
+
+# ── Environment ───────────────────────────────────────────────────────────────
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/home/pi
+# Load secrets from env file (create this file with your API keys)
+EnvironmentFile=-/opt/blind_assistant/.env
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=blind_assistant
+
+# ── Resource limits ───────────────────────────────────────────────────────────
+# Raspberry Pi 5 (8GB) — allow generous memory for AI models
+MemoryMax=6G
+CPUQuota=380%    # use up to ~4 cores on quad-core Pi
+
+# ── GPIO + audio access ───────────────────────────────────────────────────────
+SupplementaryGroups=gpio audio video dialout
+
+# ── Security hardening ────────────────────────────────────────────────────────
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/blind_assistant/data /opt/blind_assistant/logs
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
